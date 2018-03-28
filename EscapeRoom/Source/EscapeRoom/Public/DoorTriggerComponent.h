@@ -8,6 +8,10 @@
 
 class ATriggerVolume;
 class UStaticMeshComponent;
+class UCurveFloat;
+struct FTimeline;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FDoorDelegate);
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class ESCAPEROOM_API UDoorTriggerComponent : public UActorComponent
@@ -18,6 +22,14 @@ public:
 	// Sets default values for this component's properties
 	UDoorTriggerComponent();
 
+
+	// Events handling opening and closing doors
+	// Used in order to avoid latency inside the TickComponent method
+	UPROPERTY(BlueprintAssignable)
+		FDoorDelegate OpenDoorEvent;
+	UPROPERTY(BlueprintAssignable)
+		FDoorDelegate CloseDoorEvent;
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
@@ -27,6 +39,9 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 private:
+
+	UCurveFloat * LoadCurveFloatAsset(const TCHAR * ASSET_PATH);
+	void MaintainTimeline(FTimeline * Timeline, UCurveFloat * CurveFloat, const FName & MethodName, bool Looping);
 
 	UPROPERTY(EditAnywhere)
 		ATriggerVolume* PressurePlate = nullptr;
@@ -40,7 +55,10 @@ private:
 
 	float GetMassOfActorsInVolume();
 
+	UFUNCTION()
 	void OpenDoor();
+
+	UFUNCTION()
 	void CloseDoor();
 	
 };
