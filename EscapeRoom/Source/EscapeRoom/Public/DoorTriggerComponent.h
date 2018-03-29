@@ -6,10 +6,12 @@
 #include "Components/ActorComponent.h"
 #include "DoorTriggerComponent.generated.h"
 
+//Forward declarations
 class ATriggerVolume;
 class UStaticMeshComponent;
 class UCurveFloat;
 struct FTimeline;
+class UBoxComponent;
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class ESCAPEROOM_API UDoorTriggerComponent : public UActorComponent
@@ -19,6 +21,9 @@ class ESCAPEROOM_API UDoorTriggerComponent : public UActorComponent
 public:	
 	// Sets default values for this component's properties
 	UDoorTriggerComponent();
+
+	UPROPERTY(EditAnywhere)
+	FVector TriggerScale = FVector(80.0f, 80.0f, 80.0f);
 
 protected:
 	// Called when the game starts
@@ -39,15 +44,10 @@ private:
 	void MaintainTimeline(FTimeline * Timeline, UCurveFloat * CurveFloat, const FName & MethodName, bool Looping);
 
 	UPROPERTY(EditAnywhere)
-		ATriggerVolume* PressurePlate = nullptr;
-
-	UPROPERTY(EditAnywhere)
 		float MassTreshold = 10.0f;
 
 	float InitYaw;
 	bool bIsDoorOpen = false;
-
-	float GetMassOfActorsInVolume();
 
 	//uses a timeline function in order to rotate the door
 	//adds rotation!
@@ -55,5 +55,14 @@ private:
 		void RotateDoorUsingTimeline(float Value);
 
 	FTimeline* FTLDoorOpening = nullptr;
-	
+
+	float TotalMass;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent * BoxTrigger = nullptr;
+
+	UFUNCTION()
+	void OnBoxBeginOverlap(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	UFUNCTION()
+	void OnBoxEndOverlap(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 };

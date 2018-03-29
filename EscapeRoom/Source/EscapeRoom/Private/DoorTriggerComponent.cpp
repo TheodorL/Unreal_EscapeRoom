@@ -7,6 +7,7 @@
 #include "GameFramework/Actor.h"
 #include "Components/TimelineComponent.h"
 #include "ConstructorHelpers.h"
+#include "Components/BoxComponent.h"
 
 static UCurveFloat* OpenDoorCurve = nullptr;
 
@@ -18,12 +19,33 @@ UDoorTriggerComponent::UDoorTriggerComponent()
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
 
+	TotalMass = 0;
+
 	if (OpenDoorCurve == nullptr)
 	{
 		OpenDoorCurve = LoadCurveFloatAsset(TEXT("/Game/DoorOpening"));
 	}
 
 	FTLDoorOpening = new FTimeline;
+	if (!BoxTrigger)
+	{
+		BoxTrigger = CreateDefaultSubobject<UBoxComponent>(FName("DoorTriggerArea"));
+
+		if (GetOwner())
+		{
+			BoxTrigger->AttachToComponent(GetOwner()->GetRootComponent(), FAttachmentTransformRules::KeepWorldTransform);
+		}
+
+		BoxTrigger->InitBoxExtent(TriggerScale);
+		BoxTrigger->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap);
+		BoxTrigger->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
+		BoxTrigger->SetCollisionResponseToChannel(ECollisionChannel::ECC_PhysicsBody, ECollisionResponse::ECR_Overlap);
+		BoxTrigger->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Overlap);
+		BoxTrigger->bGenerateOverlapEvents = true;
+		BoxTrigger->OnComponentBeginOverlap.AddDynamic(this, &UDoorTriggerComponent::OnBoxBeginOverlap);
+		BoxTrigger->OnComponentEndOverlap.AddDynamic(this, &UDoorTriggerComponent::OnBoxEndOverlap);
+	}
+
 }
 
 void UDoorTriggerComponent::BeginDestroy()
@@ -46,8 +68,6 @@ void UDoorTriggerComponent::BeginPlay()
 		MaintainTimeline(FTLDoorOpening, OpenDoorCurve, FName("RotateDoorUsingTimeline"), false);
 	}
 
-	
-	
 }
 
 
@@ -56,32 +76,18 @@ void UDoorTriggerComponent::TickComponent(float DeltaTime, ELevelTick TickType, 
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	FTLDoorOpening->TickTimeline(DeltaTime);
-	
-
-	if (GetMassOfActorsInVolume() > MassTreshold && bIsDoorOpen == false)
+	if (TotalMass > MassTreshold && bIsDoorOpen == false)
 	{
 		FTLDoorOpening->Play();
 		bIsDoorOpen = true;
 	}
-	if (GetMassOfActorsInVolume() < MassTreshold && bIsDoorOpen == true)
+	if (TotalMass < MassTreshold && bIsDoorOpen == true)
 	{
 		FTLDoorOpening->Reverse();
 		bIsDoorOpen = false;
 	}
-}
 
-float UDoorTriggerComponent::GetMassOfActorsInVolume()
-{
-	if (!PressurePlate) return -1.0f;
-	float TotalMass = 0.0f;
-	TArray<AActor*> ActorsInVolume;
-	PressurePlate->GetOverlappingActors(ActorsInVolume);
-	for (const AActor *Actor : ActorsInVolume)
-	{
-		TotalMass += Actor->FindComponentByClass<UPrimitiveComponent>()->GetMass();
-	}
-	return TotalMass;
+	FTLDoorOpening->TickTimeline(DeltaTime);
 }
 
 UCurveFloat * UDoorTriggerComponent::LoadCurveFloatAsset(const TCHAR * ASSET_PATH)
@@ -108,5 +114,15 @@ void UDoorTriggerComponent::RotateDoorUsingTimeline(float Value)
 {
 	float YawToSet = Value * 90.0f;
 	GetOwner()->SetActorRotation(FRotator(0.0f, InitYaw + YawToSet, 0.0f));
+}
+
+void UDoorTriggerComponent::OnBoxBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	TotalMass += OtherActor->FindComponentByClass<UPrimitiveComponent>()->GetMass();
+}
+
+void UDoorTriggerComponent::OnBoxEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	TotalMass -= OtherActor->FindComponentByClass<UPrimitiveComponent>()->GetMass();
 }
 

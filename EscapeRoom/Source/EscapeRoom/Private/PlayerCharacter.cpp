@@ -35,12 +35,17 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	GetCharacterMovement()->bApplyGravityWhileJumping = true;
 	GetCharacterMovement()->Mass = 1.0f;
 
+	if (!CameraComponent)
+	{
+		CameraComponent = CreateDefaultSubobject<UCameraComponent>(FName("CameraComponent"));
+		CameraComponent->SetupAttachment(RootComponent);
+		CameraComponent->bUsePawnControlRotation = true;
+	}
 
-	CameraComponent = CreateDefaultSubobject<UCameraComponent>(FName("CameraComponent"));
-	CameraComponent->SetupAttachment(RootComponent);
-	CameraComponent->bUsePawnControlRotation = true;
-
-	PhysicsHandle = CreateDefaultSubobject<UPhysicsHandleComponent>(FName("PhysicsHandle"));
+	if (!PhysicsHandle)
+	{
+		PhysicsHandle = CreateDefaultSubobject<UPhysicsHandleComponent>(FName("PhysicsHandle"));
+	}
 
 }
 
@@ -58,7 +63,7 @@ void APlayerCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	
-	if (PhysicsHandle->GrabbedComponent && !bIsThrowing)
+	if (PhysicsHandle->GrabbedComponent)// && !bIsThrowing)
 	{
 		UpdateGrabbedComponent();
 	}
@@ -128,7 +133,7 @@ void APlayerCharacter::TryGrab()
 		FCollisionObjectQueryParams(ECollisionChannel::ECC_PhysicsBody),
 		FCollisionQueryParams(FName("Text"), false, this)
 	);
-	if (LineTraceResult.GetComponent())
+	if (LineTraceResult.GetActor())
 	{
 		Grab(LineTraceResult.GetComponent());
 	}
@@ -143,10 +148,14 @@ void APlayerCharacter::Grab(UPrimitiveComponent* ComponentToGrab)
 		ComponentToGrab->GetOwner()->GetActorLocation(),
 		ComponentToGrab->GetOwner()->GetActorRotation()
 	);
+	if(PhysicsHandle->GrabbedComponent)
+		PhysicsHandle->GrabbedComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Ignore);
 }
 
 void APlayerCharacter::Release()
 {
+	if (!PhysicsHandle->GrabbedComponent) return;
+	PhysicsHandle->GrabbedComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Block);
 	PhysicsHandle->ReleaseComponent();
 }
 
@@ -163,9 +172,7 @@ void APlayerCharacter::Throw()
 {
 	if (PhysicsHandle->GrabbedComponent)
 	{
-		bIsThrowing = true;
 		PhysicsHandle->GrabbedComponent->AddImpulse(FVector(CameraComponent->GetComponentLocation() + CameraComponent->GetComponentRotation().Vector() * ThrowForce));
-		PhysicsHandle->ReleaseComponent();
-		bIsThrowing = false;
+		Release();
 	}
 }
