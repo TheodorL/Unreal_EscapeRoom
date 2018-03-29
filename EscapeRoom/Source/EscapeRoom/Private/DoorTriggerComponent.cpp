@@ -22,6 +22,15 @@ UDoorTriggerComponent::UDoorTriggerComponent()
 	{
 		OpenDoorCurve = LoadCurveFloatAsset(TEXT("/Game/DoorOpening"));
 	}
+
+	FTLDoorOpening = new FTimeline;
+}
+
+void UDoorTriggerComponent::BeginDestroy()
+{
+	delete FTLDoorOpening;
+
+	Super::BeginDestroy();
 }
 
 
@@ -30,19 +39,14 @@ void UDoorTriggerComponent::BeginPlay()
 {
 	Super::BeginPlay();
 	InitYaw = GetOwner()->GetActorRotation().Yaw;
-	FinalYaw = InitYaw + 90.0f;
 
-	OpenDoorEvent.AddDynamic(this, &UDoorTriggerComponent::OpenDoor);
-	CloseDoorEvent.AddDynamic(this, &UDoorTriggerComponent::CloseDoor);
+	if (OpenDoorCurve)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("YES"))
+		MaintainTimeline(FTLDoorOpening, OpenDoorCurve, FName("RotateDoorUsingTimeline"), false);
+	}
 
-	if (OpenDoorCurve == nullptr)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Could not find curve asset!"))
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Found curve asset!"))
-	}
+	
 	
 }
 
@@ -51,13 +55,19 @@ void UDoorTriggerComponent::BeginPlay()
 void UDoorTriggerComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	FTLDoorOpening->TickTimeline(DeltaTime);
+	
+
 	if (GetMassOfActorsInVolume() > MassTreshold && bIsDoorOpen == false)
 	{
-		OpenDoorEvent.Broadcast();
+		FTLDoorOpening->Play();
+		bIsDoorOpen = true;
 	}
 	if (GetMassOfActorsInVolume() < MassTreshold && bIsDoorOpen == true)
 	{
-		CloseDoorEvent.Broadcast();
+		FTLDoorOpening->Reverse();
+		bIsDoorOpen = false;
 	}
 }
 
@@ -67,23 +77,11 @@ float UDoorTriggerComponent::GetMassOfActorsInVolume()
 	float TotalMass = 0.0f;
 	TArray<AActor*> ActorsInVolume;
 	PressurePlate->GetOverlappingActors(ActorsInVolume);
-	for (const auto &Actor : ActorsInVolume)
+	for (const AActor *Actor : ActorsInVolume)
 	{
 		TotalMass += Actor->FindComponentByClass<UPrimitiveComponent>()->GetMass();
 	}
 	return TotalMass;
-}
-
-void UDoorTriggerComponent::OpenDoor()
-{
-	GetOwner()->AddActorWorldRotation(FRotator(0.0f, 90.0f, 0.0f));
-	bIsDoorOpen = true;
-}
-
-void UDoorTriggerComponent::CloseDoor()
-{
-	GetOwner()->AddActorWorldRotation(FRotator(0.0f, -90.0f, 0.0f));
-	bIsDoorOpen = false;
 }
 
 UCurveFloat * UDoorTriggerComponent::LoadCurveFloatAsset(const TCHAR * ASSET_PATH)
@@ -104,5 +102,11 @@ void UDoorTriggerComponent::MaintainTimeline(FTimeline * Timeline, UCurveFloat *
 
 	Timeline->AddInterpFloat(CurveFloat, ProgressFunction);
 	Timeline->SetLooping(Looping);
+}
+
+void UDoorTriggerComponent::RotateDoorUsingTimeline(float Value)
+{
+	float YawToSet = Value * 90.0f;
+	GetOwner()->SetActorRotation(FRotator(0.0f, InitYaw + YawToSet, 0.0f));
 }
 

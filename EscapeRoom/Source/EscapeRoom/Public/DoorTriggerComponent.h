@@ -11,8 +11,6 @@ class UStaticMeshComponent;
 class UCurveFloat;
 struct FTimeline;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FDoorDelegate);
-
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class ESCAPEROOM_API UDoorTriggerComponent : public UActorComponent
 {
@@ -22,17 +20,11 @@ public:
 	// Sets default values for this component's properties
 	UDoorTriggerComponent();
 
-
-	// Events handling opening and closing doors
-	// Used in order to avoid latency inside the TickComponent method
-	UPROPERTY(BlueprintAssignable)
-		FDoorDelegate OpenDoorEvent;
-	UPROPERTY(BlueprintAssignable)
-		FDoorDelegate CloseDoorEvent;
-
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
+
+	virtual void BeginDestroy() override;
 
 public:	
 	// Called every frame
@@ -40,25 +32,28 @@ public:
 
 private:
 
-	UCurveFloat * LoadCurveFloatAsset(const TCHAR * ASSET_PATH);
+	//returns the curvefloat found at the given path
+	static UCurveFloat * LoadCurveFloatAsset(const TCHAR * ASSET_PATH);
+
+	//binds a curve float and a interp function to the timeline
 	void MaintainTimeline(FTimeline * Timeline, UCurveFloat * CurveFloat, const FName & MethodName, bool Looping);
 
 	UPROPERTY(EditAnywhere)
 		ATriggerVolume* PressurePlate = nullptr;
 
 	UPROPERTY(EditAnywhere)
-		float MassTreshold = 30.0f;
+		float MassTreshold = 10.0f;
 
 	float InitYaw;
-	float FinalYaw;
 	bool bIsDoorOpen = false;
 
 	float GetMassOfActorsInVolume();
 
+	//uses a timeline function in order to rotate the door
+	//adds rotation!
 	UFUNCTION()
-	void OpenDoor();
+		void RotateDoorUsingTimeline(float Value);
 
-	UFUNCTION()
-	void CloseDoor();
+	FTimeline* FTLDoorOpening = nullptr;
 	
 };

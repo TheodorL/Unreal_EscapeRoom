@@ -164,7 +164,7 @@ void APlayerCharacter::Throw()
 	if (PhysicsHandle->GrabbedComponent)
 	{
 		bIsThrowing = true;
-		PhysicsHandle->GrabbedComponent->AddImpulse(FVector(CameraComponent->GetComponentLocation() + CameraComponent->GetComponentRotation().Vector() * 15000));
+		PhysicsHandle->GrabbedComponent->AddImpulse(FVector(CameraComponent->GetComponentLocation() + CameraComponent->GetComponentRotation().Vector() * ThrowForce));
 		PhysicsHandle->ReleaseComponent();
 		bIsThrowing = false;
 	}

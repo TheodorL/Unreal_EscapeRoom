@@ -20,6 +20,8 @@ public:
 	APlayerCharacter();
 	APlayerCharacter(const FObjectInitializer& ObjectInitializer);
 
+	UPROPERTY(EditDefaultsOnly)
+		float ThrowForce = 50000.0f; //in CentiNewtons probably
 
 protected:
 
