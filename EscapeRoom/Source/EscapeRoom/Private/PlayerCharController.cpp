@@ -3,24 +3,14 @@
 #include "PlayerCharController.h"
 #include "PlayerCharacter.h"
 #include "Blueprint/UserWidget.h"
+#include "GameFramework/PlayerInput.h"
+#include "Kismet/GameplayStatics.h"
 
 
 void APlayerCharController::BeginPlay()
 {
 	Super::BeginPlay();
-	PossessedCharacter = Cast<APlayerCharacter>(GetCharacter());
 
-	if (wHUD)
-	{
-		HUD = CreateWidget<UUserWidget>(this, wHUD);
-		if (HUD)
-		{
-			HUD->AddToViewport();
-		}
-	}
 }
 
-void APlayerCharController::SetupInputComponent()
-{
-}
 

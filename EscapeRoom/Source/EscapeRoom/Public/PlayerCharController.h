@@ -8,6 +8,7 @@
 
 class APlayerCharacter;
 class UUserWidget;
+class UInputComponent;
 
 /**
  * 
@@ -18,21 +19,10 @@ class ESCAPEROOM_API APlayerCharController : public APlayerController
 	GENERATED_BODY()
 
 public:
-
-	//reference to the editor widget
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widgets")
-		TSubclassOf<UUserWidget> wHUD;
-
-	UUserWidget * HUD = nullptr;
+	
 
 protected:
 	virtual void BeginPlay() override;
-	virtual void SetupInputComponent() override;
 
-private:
 
-	APlayerCharacter* PossessedCharacter = nullptr;
-
-	
-	
 };
