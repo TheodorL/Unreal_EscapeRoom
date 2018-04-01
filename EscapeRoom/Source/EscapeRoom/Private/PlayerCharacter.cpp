@@ -42,6 +42,8 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 		PhysicsHandle = CreateDefaultSubobject<UPhysicsHandleComponent>(FName("PhysicsHandle"));
 	}
 
+	CurrentWeaponType = EWeaponType::WT_1;
+
 }
 
 // Called when the game starts or when spawned
@@ -80,19 +82,21 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 	PlayerInputComponent->BindAction("Sprint", IE_Pressed, this, &APlayerCharacter::StartSprinting);
 	PlayerInputComponent->BindAction("Sprint", IE_Released, this, &APlayerCharacter::StopSprinting);
 
+	PlayerInputComponent->BindAction("Grab", IE_Pressed, this, &APlayerCharacter::OnRightClickPressed);
+	PlayerInputComponent->BindAction("Grab", IE_Released, this, &APlayerCharacter::OnRightClickReleased);
+	PlayerInputComponent->BindAction("Throw", IE_Pressed, this, &APlayerCharacter::OnLeftClickPressed);
+	PlayerInputComponent->BindAction("Throw", IE_Released, this, &APlayerCharacter::OnLeftClickReleased);
+
+	PlayerInputComponent->BindAction("CreateGun", IE_Pressed, this, &APlayerCharacter::CreateGun);
+	PlayerInputComponent->BindAction("DeleteGun", IE_Pressed, this, &APlayerCharacter::DeleteGun);
+	PlayerInputComponent->BindAction("Key1", IE_Pressed, this, &APlayerCharacter::Key1Pressed);
+	PlayerInputComponent->BindAction("Key2", IE_Pressed, this, &APlayerCharacter::Key2Pressed);
+
 	PlayerInputComponent->BindAxis("InputForward", this, &APlayerCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("InputRight", this, &APlayerCharacter::MoveRight);
 	PlayerInputComponent->BindAxis("Turn", this, &APlayerCharacter::TurnAtRate);
 	PlayerInputComponent->BindAxis("LookUp", this, &APlayerCharacter::LookUpAtRate);
 	PlayerInputComponent->BindAxis("IncreaseReach", this, &APlayerCharacter::IncreaseReach);
-
-
-	PlayerInputComponent->BindAction("Grab", IE_Pressed, this, &APlayerCharacter::OnRightClickPressed);
-	PlayerInputComponent->BindAction("Grab", IE_Released, this, &APlayerCharacter::OnRightClickReleased);
-	PlayerInputComponent->BindAction("Throw", IE_Pressed, this, &APlayerCharacter::OnLeftClickPressed);
-
-	PlayerInputComponent->BindAction("CreateGun", IE_Pressed, this, &APlayerCharacter::CreateGun);
-	PlayerInputComponent->BindAction("DeleteGun", IE_Pressed, this, &APlayerCharacter::DeleteGun);
 }
 
 
@@ -189,15 +193,23 @@ void APlayerCharacter::OnLeftClickPressed()
 	}
 }
 
+void APlayerCharacter::OnLeftClickReleased()
+{
+	if (CharacterGun)
+	{
+		CharacterGun->StopFiring();
+	}
+}
+
 void APlayerCharacter::CreateGun()
 {
 	if(!CharacterGun)
 	{
 		CharacterGun = NewObject<UGunBase>(this, UGunBase::StaticClass(), FName("CharacterGun"), EObjectFlags::RF_Dynamic);
-		CharacterGun->InitializeWeapon(EWeaponType::WT_2);
+		CharacterGun->InitializeWeapon(CurrentWeaponType);
 		CharacterGun->RegisterComponent();
 		CharacterGun->AttachToComponent(CameraComponent, FAttachmentTransformRules::KeepRelativeTransform);
-		CharacterGun->SetRelativeLocation(FVector(20.0f, 20.0f, 10.0f));
+		CharacterGun->SetRelativeLocation(FVector(20.0f, 20.0f, 0.0f));
 		UE_LOG(LogTemp, Warning, TEXT("Creating gun!"))
 		}
 	else
@@ -213,4 +225,20 @@ void APlayerCharacter::DeleteGun()
 	CharacterGun->DestroyComponent();
 	CharacterGun = nullptr;
 	UE_LOG(LogTemp, Warning, TEXT("Deleting gun!"))
+}
+
+void APlayerCharacter::Key1Pressed()
+{
+	if (CurrentWeaponType == EWeaponType::WT_1 || !CharacterGun) return;
+
+	CurrentWeaponType = EWeaponType::WT_1;
+	CharacterGun->InitializeWeapon(CurrentWeaponType);
+}
+
+void APlayerCharacter::Key2Pressed()
+{
+	if (CurrentWeaponType == EWeaponType::WT_2 || !CharacterGun) return;
+
+	CurrentWeaponType = EWeaponType::WT_2;
+	CharacterGun->InitializeWeapon(CurrentWeaponType);
 }

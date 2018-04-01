@@ -16,6 +16,7 @@ ABaseProjectile::ABaseProjectile()
 	CollisionComp->InitSphereRadius(10.0f);
 	CollisionComp->CanCharacterStepUpOn = ECB_No;
 	CollisionComp->SetWalkableSlopeOverride(FWalkableSlopeOverride(WalkableSlope_Unwalkable, 0.0f));
+	CollisionComp->SetCollisionProfileName(FName("Projectile"));
 	RootComponent = CollisionComp;
 
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
@@ -26,7 +27,7 @@ ABaseProjectile::ABaseProjectile()
 	{
 		VisibleComp->SetStaticMesh(SMToSet.Object);
 		VisibleComp->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
-		VisibleComp->SetRelativeScale3D(FVector(0.25f, 0.25f, 0.25f));
+		VisibleComp->SetRelativeScale3D(FVector(0.125f, 0.125f, 0.125f));
 		VisibleComp->SetVisibility(true);
 		VisibleComp->SetMobility(EComponentMobility::Movable);
 		VisibleComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -41,7 +42,7 @@ ABaseProjectile::ABaseProjectile()
 	MovementComp->bAutoActivate = false;
 	MovementComp->bRotationFollowsVelocity = true;
 	MovementComp->bShouldBounce = true;
-	InitialLifeSpan = 4.0f;
+	InitialLifeSpan = 5.0f;
 }
 
 // Called when the game starts or when spawned
@@ -53,7 +54,7 @@ void ABaseProjectile::BeginPlay()
 
 void ABaseProjectile::Launch()
 {
-	MovementComp->SetVelocityInLocalSpace(FVector::ForwardVector * 1000.0f);
+	MovementComp->SetVelocityInLocalSpace(FVector::ForwardVector * 2000.0f);
 	MovementComp->Activate();
 }
 

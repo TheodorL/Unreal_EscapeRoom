@@ -11,6 +11,7 @@ class UPhysicsHandleComponent;
 class APlayerCharController;
 class UGunBase;
 class UStaticMesh;
+enum class EWeaponType : uint8;
 
 UCLASS()
 class ESCAPEROOM_API APlayerCharacter : public ACharacter
@@ -62,9 +63,12 @@ private:
 	void OnRightClickReleased();
 	void IncreaseReach(float Scale);
 	void OnLeftClickPressed();
+	void OnLeftClickReleased();
 
 	void CreateGun();
 	void DeleteGun();
+	void Key1Pressed();
+	void Key2Pressed();
 
 	UPROPERTY(EditDefaultsOnly)
 		float BaseTurnRate = 45.0f;
@@ -88,5 +92,7 @@ private:
 
 	bool bIsThrowing = false;
 	bool bIsSprinting = false;
+
+	EWeaponType CurrentWeaponType;
 	
 };
