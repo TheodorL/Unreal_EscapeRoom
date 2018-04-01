@@ -7,6 +7,9 @@
 #include "PhysicsEngine/PhysicsHandleComponent.h"
 #include "PlayerCharController.h"
 #include "Engine/World.h"
+#include "GunBase.h"
+#include "Engine/StaticMesh.h"
+#include "Runtime/CoreUObject/Public/UObject/UObjectGlobals.h"
 
 // Sets default values
 APlayerCharacter::APlayerCharacter()
@@ -21,19 +24,11 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 {
 	GetCapsuleComponent()->InitCapsuleSize(42.0f, 96.0f);
 
-	BaseYawRate = 540.0f;
-
 	bUseControllerRotationPitch = false;
-	bUseControllerRotationYaw = false;
+	bUseControllerRotationYaw = true;
 	bUseControllerRotationRoll = false;
 
-	GetCharacterMovement()->bOrientRotationToMovement = true;
-	GetCharacterMovement()->RotationRate = FRotator(0.0f, BaseYawRate, 0.0f);
-	GetCharacterMovement()->JumpZVelocity = 600.0f;
-	GetCharacterMovement()->AirControl = 0.5f;
-	GetCharacterMovement()->GravityScale = 2.0f;
-	GetCharacterMovement()->bApplyGravityWhileJumping = true;
-	GetCharacterMovement()->Mass = 1.0f;
+	GetCharacterMovement()->MaxWalkSpeed = StepSpeed;
 
 	if (!CameraComponent)
 	{
@@ -72,7 +67,7 @@ void APlayerCharacter::Tick(float DeltaTime)
 
 void APlayerCharacter::UpdateGrabbedComponent()
 {
-	PhysicsHandle->SetTargetLocation(CameraComponent->GetComponentLocation() + CameraComponent->GetComponentRotation().Vector() * TempReach);
+	PhysicsHandle->SetTargetLocation(this->GetActorLocation() + CameraComponent->GetComponentRotation().Vector() * TempReach);
 }
 
 // Called to bind functionality to input
@@ -82,9 +77,8 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
-	PlayerInputComponent->BindAction("Grab", IE_Pressed, this, &APlayerCharacter::TryGrab);
-	PlayerInputComponent->BindAction("Grab", IE_Released, this, &APlayerCharacter::Release);
-	PlayerInputComponent->BindAction("Throw", IE_Pressed, this, &APlayerCharacter::Throw);
+	PlayerInputComponent->BindAction("Sprint", IE_Pressed, this, &APlayerCharacter::StartSprinting);
+	PlayerInputComponent->BindAction("Sprint", IE_Released, this, &APlayerCharacter::StopSprinting);
 
 	PlayerInputComponent->BindAxis("InputForward", this, &APlayerCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("InputRight", this, &APlayerCharacter::MoveRight);
@@ -92,22 +86,25 @@ void APlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 	PlayerInputComponent->BindAxis("LookUp", this, &APlayerCharacter::LookUpAtRate);
 	PlayerInputComponent->BindAxis("IncreaseReach", this, &APlayerCharacter::IncreaseReach);
 
+
+	PlayerInputComponent->BindAction("Grab", IE_Pressed, this, &APlayerCharacter::OnRightClickPressed);
+	PlayerInputComponent->BindAction("Grab", IE_Released, this, &APlayerCharacter::OnRightClickReleased);
+	PlayerInputComponent->BindAction("Throw", IE_Pressed, this, &APlayerCharacter::OnLeftClickPressed);
+
+	PlayerInputComponent->BindAction("CreateGun", IE_Pressed, this, &APlayerCharacter::CreateGun);
+	PlayerInputComponent->BindAction("DeleteGun", IE_Pressed, this, &APlayerCharacter::DeleteGun);
 }
+
+
 
 void APlayerCharacter::MoveForward(float Scale)
 {
-	if (FMath::IsNearlyZero(Scale)) return;
-	const FRotator YawRotation(0.0f, GetControlRotation().Yaw , 0.0f);
-	const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-	GetMovementComponent()->AddInputVector(Scale * Direction);
+	AddMovementInput(GetActorForwardVector(), Scale);
 }
 
 void APlayerCharacter::MoveRight(float Scale)
 {
-	if (FMath::IsNearlyZero(Scale)) return;
-	const FRotator YawRotation(0.0f, GetControlRotation().Yaw, 0.0f);
-	const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
-	GetMovementComponent()->AddInputVector(Scale*Direction);
+	AddMovementInput(GetActorRightVector(), Scale);
 }
 
 void APlayerCharacter::TurnAtRate(float Scale)
@@ -120,8 +117,19 @@ void APlayerCharacter::LookUpAtRate(float Scale)
 	AddControllerPitchInput(Scale * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
 }
 
-void APlayerCharacter::TryGrab()
+void APlayerCharacter::StartSprinting()
 {
+	GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
+}
+
+void APlayerCharacter::StopSprinting()
+{
+	GetCharacterMovement()->MaxWalkSpeed = StepSpeed;
+}
+
+void APlayerCharacter::OnRightClickPressed()
+{
+	if (CharacterGun) return;
 	FVector StartVector = CameraComponent->GetComponentLocation();
 	FVector EndVector = StartVector + CameraComponent->GetComponentRotation().Vector() * InitReach;
 	FHitResult LineTraceResult;
@@ -152,7 +160,7 @@ void APlayerCharacter::Grab(UPrimitiveComponent* ComponentToGrab)
 		PhysicsHandle->GrabbedComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Ignore);
 }
 
-void APlayerCharacter::Release()
+void APlayerCharacter::OnRightClickReleased()
 {
 	if (!PhysicsHandle->GrabbedComponent) return;
 	PhysicsHandle->GrabbedComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Block);
@@ -168,11 +176,41 @@ void APlayerCharacter::IncreaseReach(float Scale)
 	}
 }
 
-void APlayerCharacter::Throw()
+void APlayerCharacter::OnLeftClickPressed()
 {
-	if (PhysicsHandle->GrabbedComponent)
+	if (CharacterGun)
+	{
+		CharacterGun->StartFiring();
+	}
+	else if (PhysicsHandle->GrabbedComponent)
 	{
 		PhysicsHandle->GrabbedComponent->AddImpulse(FVector(CameraComponent->GetComponentLocation() + CameraComponent->GetComponentRotation().Vector() * ThrowForce));
-		Release();
+		OnRightClickReleased();
 	}
+}
+
+void APlayerCharacter::CreateGun()
+{
+	if(!CharacterGun)
+	{
+		CharacterGun = NewObject<UGunBase>(this, UGunBase::StaticClass(), FName("CharacterGun"), EObjectFlags::RF_Dynamic);
+		CharacterGun->InitializeWeapon(EWeaponType::WT_2);
+		CharacterGun->RegisterComponent();
+		CharacterGun->AttachToComponent(CameraComponent, FAttachmentTransformRules::KeepRelativeTransform);
+		CharacterGun->SetRelativeLocation(FVector(20.0f, 20.0f, 10.0f));
+		UE_LOG(LogTemp, Warning, TEXT("Creating gun!"))
+		}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("CharacterGun already exists!"))
+	}
+}
+
+void APlayerCharacter::DeleteGun()
+{
+	if (!CharacterGun) return;
+	CharacterGun->UnregisterComponent();
+	CharacterGun->DestroyComponent();
+	CharacterGun = nullptr;
+	UE_LOG(LogTemp, Warning, TEXT("Deleting gun!"))
 }

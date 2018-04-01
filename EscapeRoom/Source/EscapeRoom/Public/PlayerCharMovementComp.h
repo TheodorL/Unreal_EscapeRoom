@@ -13,8 +13,8 @@ UCLASS()
 class ESCAPEROOM_API UPlayerCharMovementComp : public UCharacterMovementComponent
 {
 	GENERATED_BODY()
-	
-	
+public:
+		UPlayerCharMovementComp();
 	
 	
 };

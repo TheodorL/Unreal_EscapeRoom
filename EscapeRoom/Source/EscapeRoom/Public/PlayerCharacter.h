@@ -9,6 +9,8 @@
 class UCameraComponent;
 class UPhysicsHandleComponent;
 class APlayerCharController;
+class UGunBase;
+class UStaticMesh;
 
 UCLASS()
 class ESCAPEROOM_API APlayerCharacter : public ACharacter
@@ -22,6 +24,13 @@ public:
 
 	UPROPERTY(EditDefaultsOnly)
 		float ThrowForce = 50000.0f; //in CentiNewtons probably
+
+
+	UPROPERTY(EditAnywhere)
+		bool bShouldHaveGun = true;
+
+	UPROPERTY()
+		UGunBase * CharacterGun = nullptr;
 
 protected:
 
@@ -45,15 +54,17 @@ private:
 	void MoveRight(float Scale);
 	void TurnAtRate(float Scale);
 	void LookUpAtRate(float Scale);
+	void StartSprinting();
+	void StopSprinting();
 
-	void TryGrab();
+	void OnRightClickPressed();
 	void Grab(UPrimitiveComponent* ComponentToGrab);
-	void Release();
+	void OnRightClickReleased();
 	void IncreaseReach(float Scale);
-	void Throw();
+	void OnLeftClickPressed();
 
-	UPROPERTY(EditDefaultsOnly)
-		float BaseYawRate;
+	void CreateGun();
+	void DeleteGun();
 
 	UPROPERTY(EditDefaultsOnly)
 		float BaseTurnRate = 45.0f;
@@ -69,6 +80,13 @@ private:
 
 	float TempReach;
 
+	UPROPERTY(EditDefaultsOnly)
+		float StepSpeed = 350.0f;
+
+	UPROPERTY(EditDefaultsOnly)
+		float SprintSpeed = 600.0f;
+
 	bool bIsThrowing = false;
+	bool bIsSprinting = false;
 	
 };
