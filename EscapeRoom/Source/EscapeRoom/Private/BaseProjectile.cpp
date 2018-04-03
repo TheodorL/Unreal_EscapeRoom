@@ -7,6 +7,7 @@
 #include "Classes/Engine/StaticMesh.h"
 #include "ConstructorHelpers.h"
 
+
 // Sets default values
 ABaseProjectile::ABaseProjectile()
 {
@@ -17,12 +18,13 @@ ABaseProjectile::ABaseProjectile()
 	CollisionComp->CanCharacterStepUpOn = ECB_No;
 	CollisionComp->SetWalkableSlopeOverride(FWalkableSlopeOverride(WalkableSlope_Unwalkable, 0.0f));
 	CollisionComp->SetCollisionProfileName(FName("Projectile"));
+	CollisionComp->OnComponentHit.AddDynamic(this, &ABaseProjectile::OnHit);
 	RootComponent = CollisionComp;
 
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	
 	VisibleComp = CreateDefaultSubobject<UStaticMeshComponent>("VisibleComponent");
-	ConstructorHelpers::FObjectFinder<UStaticMesh> SMToSet(TEXT("/Game/Shape_Sphere"));
+	ConstructorHelpers::FObjectFinder<UStaticMesh> SMToSet(TEXT("/Game/Meshes/Shape_Sphere"));
 	if (SMToSet.Succeeded())
 	{
 		VisibleComp->SetStaticMesh(SMToSet.Object);
@@ -50,6 +52,16 @@ void ABaseProjectile::BeginPlay()
 {
 	Super::BeginPlay();
 	
+}
+
+void ABaseProjectile::OnHit(UPrimitiveComponent * HitComp, AActor * OtherActor, UPrimitiveComponent * OtherComp, FVector NormalImpulse, const FHitResult & Hit)
+{
+	if ((OtherActor != NULL) && (OtherActor != this) && (OtherComp != NULL) && OtherComp->IsSimulatingPhysics())
+	{
+		OtherComp->AddImpulseAtLocation(GetVelocity() * 10.0f, GetActorLocation());
+
+		Destroy();
+	}
 }
 
 void ABaseProjectile::Launch()

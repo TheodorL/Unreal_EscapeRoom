@@ -41,7 +41,8 @@ protected:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	void UpdateGrabbedComponent();
+	void UpdateGrabbedComponentLocation();
+	void GrabbedComponentAddRotation(FRotator RotationToAdd);
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -58,17 +59,36 @@ private:
 	void StartSprinting();
 	void StopSprinting();
 
-	void OnRightClickPressed();
-	void Grab(UPrimitiveComponent* ComponentToGrab);
-	void OnRightClickReleased();
+	void InteractButton();
 	void IncreaseReach(float Scale);
-	void OnLeftClickPressed();
+	void FireButton();
 	void OnLeftClickReleased();
 
+	/**
+	*Function that uses the physics handle component in order to grab a object in the world.
+	*@param ComponentToGrab a pointer to the object that is going to be attached
+	*/
+	void Grab(UPrimitiveComponent* ComponentToGrab);
+
+	void ToggleRotation();
+
+	/**
+	*Function that creates a UGunBase component using the CurrentWeaponType enum
+	*/
 	void CreateGun();
+
+	/**
+	*Function that deletes the current weapon
+	*/
 	void DeleteGun();
+
+
 	void Key1Pressed();
 	void Key2Pressed();
+
+	void DropKeyPressed();
+
+	void ReleaseGrabbedComponent();
 
 	UPROPERTY(EditDefaultsOnly)
 		float BaseTurnRate = 45.0f;
@@ -78,6 +98,9 @@ private:
 
 	UPROPERTY(EditDefaultsOnly)
 		float InitReach = 120.0f;
+
+	UPROPERTY(EditDefaultsOnly)
+		float MaxReach = 185.0f;
 
 	UPROPERTY(EditDefaultsOnly)
 		float DeltaReach = 2.0f;
@@ -92,7 +115,11 @@ private:
 
 	bool bIsThrowing = false;
 	bool bIsSprinting = false;
+	bool bIsRotating = false;
+
+	FRotator RotationToAdd = FRotator(0.0f);
 
 	EWeaponType CurrentWeaponType;
+
 	
 };

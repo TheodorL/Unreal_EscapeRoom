@@ -11,8 +11,9 @@ struct FTimerHandle;
 UENUM()
 enum class EWeaponType : uint8
 {
-	WT_1,
-	WT_2
+	WT_None,
+	WT_Semi,
+	WT_Auto
 };
 
 /**
@@ -27,8 +28,6 @@ class ESCAPEROOM_API UGunBase : public UStaticMeshComponent
 public:
 
 	UGunBase();
-
-	virtual void BeginPlay() override;
 
 	void InitializeWeapon(EWeaponType WeaponType);
 
